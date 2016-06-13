@@ -1,0 +1,40 @@
+name "uwmodem_simulation"
+
+import_types_from "uwmodem_simulationTypes.hpp"
+using_library "usbl_evologics"
+using_task_library 'usbl_evologics'
+
+task_context "Task" do
+    needs_configuration
+
+    # Set interface. SERIAL or ETHERNET.
+    # This will affect the rate of transmission data in raw_data_output
+    # For SERIAL it is 2 bytes/Rawpacket. For ETHERNET it is a direct transmission.
+    property "interface", "/usbl_evologics/InterfaceType"
+    # Set average distance in meters between modems.
+    # It affects the transfer delay. It does not affect the rate of lost data.
+    property "distance", "double", 300
+
+    ###################################
+    ##   Input ports
+    ###################################
+
+    # Instant Message to be sent remote device
+    input_port "message_input", "/usbl_evologics/SendIM"
+    # Raw data to be sent to remote device
+    input_port "raw_data_input", "/iodrivers_base/RawPacket"
+
+    ###################################
+    ##   Output ports
+    ###################################
+
+    # Instant Message receveid from remote device
+    output_port "message_output", "/usbl_evologics/ReceiveIM"
+    # Raw data receveid from remote device
+    output_port "raw_data_output", "/iodrivers_base/RawPacket"
+
+    # Delivering status of "message_input".
+    output_port "message_status", "/usbl_evologics/MessageStatus"
+
+    port_driven
+end
