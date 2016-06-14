@@ -3,15 +3,18 @@
 #include "Task.hpp"
 
 using namespace uwmodem_simulation;
+using namespace usbl_evologics;
 
 Task::Task(std::string const& name)
     : TaskBase(name)
 {
+    _interface.set(ETHERNET);
 }
 
 Task::Task(std::string const& name, RTT::ExecutionEngine* engine)
     : TaskBase(name, engine)
 {
+    _interface.set(ETHERNET);
 }
 
 Task::~Task()
@@ -28,6 +31,9 @@ bool Task::configureHook()
 {
     if (! TaskBase::configureHook())
         return false;
+
+    interface = _interface.get();
+
     return true;
 }
 bool Task::startHook()
@@ -39,6 +45,14 @@ bool Task::startHook()
 void Task::updateHook()
 {
     TaskBase::updateHook();
+    base::Time status_period = base::Time::fromSeconds(1);
+
+    // Output status
+   if((base::Time::now() - last_status) > status_period)
+   {
+       last_status = base::Time::now();
+    //    _message_status.write( addStatisticCounters( checkMessageStatus()));
+   }
 }
 void Task::errorHook()
 {

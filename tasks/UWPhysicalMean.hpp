@@ -1,74 +1,67 @@
 /* Generated from orogen/lib/orogen/templates/tasks/Task.hpp */
 
-#ifndef UWMODEM_SIMULATION_TASK_TASK_HPP
-#define UWMODEM_SIMULATION_TASK_TASK_HPP
+#ifndef UWMODEM_SIMULATION_UWPHYSICALMEAN_TASK_HPP
+#define UWMODEM_SIMULATION_UWPHYSICALMEAN_TASK_HPP
 
-#include "uwmodem_simulation/TaskBase.hpp"
+#include "uwmodem_simulation/UWPhysicalMeanBase.hpp"
 #include <queue>
 
 namespace uwmodem_simulation{
 
-    /*! \class Task
+    /*! \class UWPhysicalMean
      * \brief The task context provides and requires services. It uses an ExecutionEngine to perform its functions.
      * Essential interfaces are operations, data flow ports and properties. These interfaces have been defined using the oroGen specification.
      * In order to modify the interfaces you should (re)use oroGen and rely on the associated workflow.
-     * 
+     * UWPhysicalMean is a simple underwater channel simulator.
+It is based on observation of real device rather than literature equations.
+Input in modem1 will be present in modem2's output and vice-versa.
      * \details
      * The name of a TaskContext is primarily defined via:
      \verbatim
      deployment 'deployment_name'
-         task('custom_task_name','uwmodem_simulation::Task')
+         task('custom_task_name','uwmodem_simulation::UWPhysicalMean')
      end
      \endverbatim
      *  It can be dynamically adapted when the deployment is called with a prefix argument.
      */
-    class Task : public TaskBase
+    class UWPhysicalMean : public UWPhysicalMeanBase
     {
-	friend class TaskBase;
+	friend class UWPhysicalMeanBase;
     protected:
 
-        usbl_evologics::InterfaceType interface;
+        double distance;
 
-        // Queue of Instant Messages with transmission pending.
-        std::queue<usbl_evologics::SendIM> queuePendingIMs;
-        // Queue of Instant Messages to be transmitted to remote device.
-        std::queue<usbl_evologics::SendIM> queueSendIM;
-        // Arbitrarily defining a max size for queueSendIM.
-        static const size_t MAX_QUEUE_MSG_SIZE = 100;
+        static const int im_bitrate = 976;
+        static const int raw_bitrate = 1600;
 
-        // Queue of Packets to be transmitted to remote device.
-        std::queue<iodrivers_base::RawPacket> queueSendRawPacket;
-        // Arbitrarily defining a max size for queueSendRawPacket.
-        static const size_t MAX_QUEUE_RAW_PACKET_SIZE = 50;
+        // Queue of RawPacket from modem 1 to modem 2.
+        std::queue<iodrivers_base::RawPacket> queueRawPacket12;
+        // Queue of RawPacket from modem 2 to modem 1.
+        std::queue<iodrivers_base::RawPacket> queueRawPacket21;
 
-        base::Time last_status;
+        // Queue of Instant Messages from modem 1 to modem 2.
+        std::queue<usbl_evologics::SendIM> queueSendIM12;
+        // Queue of Instant Messages from modem 2 to modem 1.
+        std::queue<usbl_evologics::SendIM> queueSendIM21;
 
-        static const size_t MAX_MSG_SIZE = 64;
-
-        // Instant Message counters
-        long long unsigned int counter_message_delivered;
-        long long unsigned int counter_message_failed;
-        long long unsigned int counter_message_received;
-        long long unsigned int counter_message_sent;
-        long long unsigned int counter_message_dropped;
 
     public:
-        /** TaskContext constructor for Task
+        /** TaskContext constructor for UWPhysicalMean
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
          * \param initial_state The initial TaskState of the TaskContext. Default is Stopped state.
          */
-        Task(std::string const& name = "uwmodem_simulation::Task");
+        UWPhysicalMean(std::string const& name = "uwmodem_simulation::UWPhysicalMean");
 
-        /** TaskContext constructor for Task
+        /** TaskContext constructor for UWPhysicalMean
          * \param name Name of the task. This name needs to be unique to make it identifiable for nameservices.
          * \param engine The RTT Execution engine to be used for this task, which serialises the execution of all commands, programs, state machines and incoming events for a task.
-         * 
+         *
          */
-        Task(std::string const& name, RTT::ExecutionEngine* engine);
+        UWPhysicalMean(std::string const& name, RTT::ExecutionEngine* engine);
 
-        /** Default deconstructor of Task
+        /** Default deconstructor of UWPhysicalMean
          */
-	~Task();
+	~UWPhysicalMean();
 
         /** This hook is called by Orocos when the state machine transitions
          * from PreOperational to Stopped. If it returns false, then the
@@ -131,4 +124,3 @@ namespace uwmodem_simulation{
 }
 
 #endif
-
