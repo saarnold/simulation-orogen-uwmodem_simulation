@@ -5,6 +5,7 @@
 
 #include "uwmodem_simulation/UWPhysicalMeanBase.hpp"
 #include <queue>
+#include <stdlib.h>
 
 namespace uwmodem_simulation{
 
@@ -29,10 +30,18 @@ Input in modem1 will be present in modem2's output and vice-versa.
 	friend class UWPhysicalMeanBase;
     protected:
 
-        double distance;
+        base::Time travel_time;
+        static const int sound_velocity = 1500;
 
         static const int im_bitrate = 976;
         static const int raw_bitrate = 1600;
+
+        static const int packet_size = 20;
+        static const double probability_good_transmission = 90;
+
+        static const int transmission_buffer_size = 16384;
+        int buffer_size_modem1;
+        int buffer_size_modem2;
 
         // Queue of RawPacket from modem 1 to modem 2.
         std::queue<iodrivers_base::RawPacket> queueRawPacket12;
@@ -43,6 +52,11 @@ Input in modem1 will be present in modem2's output and vice-versa.
         std::queue<usbl_evologics::SendIM> queueSendIM12;
         // Queue of Instant Messages from modem 2 to modem 1.
         std::queue<usbl_evologics::SendIM> queueSendIM21;
+
+        base::Time last_write_raw_packet_12;
+        base::Time last_write_raw_packet_21;
+        base::Time last_write_im_12;
+        base::Time last_write_im_21;
 
 
     public:
@@ -120,6 +134,45 @@ Input in modem1 will be present in modem2's output and vice-versa.
          * before calling start() again.
          */
         void cleanupHook();
+
+        /** Break the input RawPacket in tiny RawPackets
+         *
+         * @param input_data. RawPackt to be transmitted
+         * @param packet_size. Max size of RawPacket
+         * @return vector of RawPacket
+         */
+        std::vector<iodrivers_base::RawPacket> breakInTinyPackets(const iodrivers_base::RawPacket &input_data, int packet_size);
+
+        /** Handle received RawPacket
+         *
+         * @param queueRawPacket. Whre the RawPacket is stored.
+         * @input_data. Data to be handled
+         */
+        void handleRawPacket(std::queue<iodrivers_base::RawPacket> &queueRawPacket, const iodrivers_base::RawPacket &input_data, int &buffer_size);
+
+        /** Check if RawPacket arrived at destination
+         *
+         * @param input_data, input RawPacket with send time
+         * @param travel_time. Duration of packet transmission
+         * @return bool. True if packet arrived
+         */
+        bool checkTravelTime(const iodrivers_base::RawPacket &input_data, base::Time travel_time);
+
+        /** Control bitrate of Rawpacket
+         *
+         * @param input_data, RawPacket to be transmitted
+         * @param last_time, lat time a RawPacket was delivered
+         * @param bool. If this rate respect the limit.
+         */
+        bool controlRawDataBitRate(const iodrivers_base::RawPacket &input_data, base::Time last_time);
+
+        /** Check if RawPacket can be output at receiver
+         *
+         * @param queueRawData
+         * @param last_write. A packet was transmitted.
+         * return bool. Output RawPacket if true
+         */
+        bool hasRawData(const std::queue<iodrivers_base::RawPacket> &queuRawData, base::Time last_write);
     };
 }
 
