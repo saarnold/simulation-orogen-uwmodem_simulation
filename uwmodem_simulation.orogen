@@ -77,5 +77,9 @@ task_context "UWPhysicalMean" do
     # Raw data received from remote device
     output_port "raw_data_output_modem2", "/iodrivers_base/RawPacket"
 
+    # Delivering status of "message_input".
+    output_port "message_status_modem1", "/usbl_evologics/MessageStatus"
+    output_port "message_status_modem2", "/usbl_evologics/MessageStatus"
+
     port_driven
 end

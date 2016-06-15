@@ -35,6 +35,9 @@ Input in modem1 will be present in modem2's output and vice-versa.
 
         static const int im_bitrate = 976;
         static const int raw_bitrate = 1600;
+        static const int im_retry = 1;
+        int im_attempts1;
+        int im_attempts2;
 
         static const int packet_size = 20;
         static const double probability_good_transmission = 90;
@@ -48,10 +51,10 @@ Input in modem1 will be present in modem2's output and vice-versa.
         // Queue of RawPacket from modem 2 to modem 1.
         std::queue<iodrivers_base::RawPacket> queueRawPacket21;
 
-        // Queue of Instant Messages from modem 1 to modem 2.
-        std::queue<usbl_evologics::SendIM> queueSendIM12;
-        // Queue of Instant Messages from modem 2 to modem 1.
-        std::queue<usbl_evologics::SendIM> queueSendIM21;
+        // Instant Messages from modem 1 to modem 2 and it's status
+        usbl_evologics::MessageStatus im_status_modem1;
+        // Instant Messages from modem 2 to modem 1 and it's status
+        usbl_evologics::MessageStatus im_status_modem2;
 
         base::Time last_write_raw_packet_12;
         base::Time last_write_raw_packet_21;
@@ -146,17 +149,19 @@ Input in modem1 will be present in modem2's output and vice-versa.
         /** Handle received RawPacket
          *
          * @param queueRawPacket. Whre the RawPacket is stored.
-         * @input_data. Data to be handled
+         * @param input_data. Data to be handled
+         * @param buffer_size. Actual filled buffer
+         * @return int. Update buffer_size
          */
-        void handleRawPacket(std::queue<iodrivers_base::RawPacket> &queueRawPacket, const iodrivers_base::RawPacket &input_data, int &buffer_size);
+        int handleRawPacket(std::queue<iodrivers_base::RawPacket> &queueRawPacket, const iodrivers_base::RawPacket &input_data, int buffer_size);
 
         /** Check if RawPacket arrived at destination
          *
-         * @param input_data, input RawPacket with send time
+         * @param init_time. When the transmission started
          * @param travel_time. Duration of packet transmission
          * @return bool. True if packet arrived
          */
-        bool checkTravelTime(const iodrivers_base::RawPacket &input_data, base::Time travel_time);
+        bool checkTravelTime(base::Time init_time, base::Time travel_time);
 
         /** Control bitrate of Rawpacket
          *
@@ -164,7 +169,7 @@ Input in modem1 will be present in modem2's output and vice-versa.
          * @param last_time, lat time a RawPacket was delivered
          * @param bool. If this rate respect the limit.
          */
-        bool controlRawDataBitRate(const iodrivers_base::RawPacket &input_data, base::Time last_time);
+        bool controlBitRate(const std::vector<uint8_t> &data, base::Time last_time, int bitrate);
 
         /** Check if RawPacket can be output at receiver
          *
@@ -173,6 +178,35 @@ Input in modem1 will be present in modem2's output and vice-versa.
          * return bool. Output RawPacket if true
          */
         bool hasRawData(const std::queue<iodrivers_base::RawPacket> &queuRawData, base::Time last_write);
+
+        /** Check if status allows transmission of Instant MessageStatus
+         *
+         * @param im_status. Check status
+         * @return bool. True if IM can be transmitted
+         */
+        bool checkIMStatus(const usbl_evologics::MessageStatus &im_status);
+
+        /** Handle new Instat Message
+         *
+         * @param send_im. New Instant Message to be transmitted
+         * @param im_status. Store IM in im_status and track it's status.
+         */
+         int handleIM(const usbl_evologics::SendIM &send_im, usbl_evologics::MessageStatus &im_status);
+
+         /** Check delivery of Instant Message
+          *
+          * @param im_status. Track Instant Message, sending time.
+          * @param attempts. How many times the message will be sent till receives an ack.
+          * @return Delivery status.
+          */
+         usbl_evologics::DeliveryStatus checkDelivery(const usbl_evologics::MessageStatus &im_status, int attempts);
+
+         /** Turn a SendIM in a ReceiveIM
+          *
+          * @param send_im. Instant Message to be converted
+          * @return ReceiveIM
+          */
+         usbl_evologics::ReceiveIM toReceivedIM(const usbl_evologics::SendIM &send_im);
     };
 }
 
