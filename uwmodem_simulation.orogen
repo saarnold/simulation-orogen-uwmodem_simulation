@@ -4,16 +4,23 @@ import_types_from "uwmodem_simulationTypes.hpp"
 using_library "usbl_evologics"
 using_task_library 'usbl_evologics'
 
-# Instantiate one Task per modem (AUV or Dock) and connect them
-# via the UWPhysicalMean. The UWPhysicalMean work as the middleman
-# so the Task can be used as a full duplex channel.
+# Instantiate one Task per way.
+# Connect inputs in transmitter and outputs in receiver.
 task_context "Task" do
     needs_configuration
 
     # Set interface. SERIAL or ETHERNET. Default ETHERNET
     # This will affect the rate of transmission data in raw_data_output
     # For SERIAL it is 2 bytes/Rawpacket. For ETHERNET it is a direct transmission.
-    property "interface", "/usbl_evologics/InterfaceType"
+    property "receiver_interface", "/usbl_evologics/InterfaceType", :ETHERNET
+    # Set average distance in meters between modems.
+    # It affects the transfer delay. It does not affect the rate of lost data.
+    property "distance", "double", 300
+    # Set probability of good transmission in %
+    # It will affect the lost of data
+    property "probability", "int", 90
+    # Instant Message retry. How many retries should be made in case of failure.
+    property "im_retry", "int", 2
 
     ###################################
     ##   Input ports
@@ -36,50 +43,7 @@ task_context "Task" do
     # Delivering status of "message_input".
     output_port "message_status", "/usbl_evologics/MessageStatus"
 
-    port_driven
-end
-
-# UWPhysicalMean is a simple underwater channel simulator.
-# It is based on observation of real device rather than literature equations.
-# Input in modem1 will be present in modem2's output and vice-versa.
-task_context "UWPhysicalMean" do
-    needs_configuration
-
-    # Set average distance in meters between modems.
-    # It affects the transfer delay. It does not affect the rate of lost data.
-    property "distance", "double", 300
-
-    ###################################
-    ##   Input ports
-    ###################################
-
-    # Instant Message to be sent remote device
-    input_port "message_input_modem1", "/usbl_evologics/SendIM"
-    # Raw data to be sent to remote device
-    input_port "raw_data_input_modem1", "/iodrivers_base/RawPacket"
-
-    # Instant Message to be sent remote device
-    input_port "message_input_modem2", "/usbl_evologics/SendIM"
-    # Raw data to be sent to remote device
-    input_port "raw_data_input_modem2", "/iodrivers_base/RawPacket"
-
-    ###################################
-    ##   Output ports
-    ###################################
-
-    # Instant Message received from remote device
-    output_port "message_output_modem1", "/usbl_evologics/ReceiveIM"
-    # Raw data received from remote device
-    output_port "raw_data_output_modem1", "/iodrivers_base/RawPacket"
-
-    # Instant Message received from remote device
-    output_port "message_output_modem2", "/usbl_evologics/ReceiveIM"
-    # Raw data received from remote device
-    output_port "raw_data_output_modem2", "/iodrivers_base/RawPacket"
-
-    # Delivering status of "message_input".
-    output_port "message_status_modem1", "/usbl_evologics/MessageStatus"
-    output_port "message_status_modem2", "/usbl_evologics/MessageStatus"
+    runtime_states   :HUGE_INSTANT_MESSAGE, :FULL_IM_QUEUE
 
     port_driven
 end
