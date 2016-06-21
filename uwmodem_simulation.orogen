@@ -20,7 +20,7 @@ task_context "Task" do
     # It will affect the lost of data
     property "probability", "int", 90
     # Instant Message retry. How many retries should be made in case of failure.
-    property "im_retry", "int", 2
+    property "im_retry", "int", 1
 
     ###################################
     ##   Input ports
@@ -45,5 +45,5 @@ task_context "Task" do
 
     runtime_states   :HUGE_INSTANT_MESSAGE, :FULL_IM_QUEUE
 
-    port_driven
+    periodic 0.01
 end

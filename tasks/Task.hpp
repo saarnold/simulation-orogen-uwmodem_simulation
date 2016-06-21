@@ -6,6 +6,7 @@
 #include "uwmodem_simulation/TaskBase.hpp"
 #include "usbl_evologics/Driver.hpp"
 #include <iostream>
+#include <sstream>
 #include <queue>
 
 namespace uwmodem_simulation{
@@ -57,7 +58,6 @@ namespace uwmodem_simulation{
         static const size_t MAX_MSG_SIZE = 64;
 
         base::Time last_write_raw_packet;
-        base::Time last_write_im;
 
         base::Time status_period;
         base::Time last_status;

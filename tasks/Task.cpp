@@ -32,9 +32,12 @@ bool Task::configureHook()
 
     interface = _receiver_interface.get();
     status_period = base::Time::fromSeconds(1);
-    travel_time = base::Time::fromSeconds(sound_velocity/_distance.get());
+    travel_time = base::Time::fromSeconds(_distance.get()/sound_velocity);
     probability_good_transmission = _probability.get();
     im_retry = _im_retry.get();
+    im_status.status = EMPTY;
+    srand (base::Time::now().toSeconds());
+    last_write_raw_packet = base::Time::fromSeconds(0);
 
     return true;
 }
@@ -66,10 +69,8 @@ void Task::updateHook()
     iodrivers_base::RawPacket raw_data_input;
     while(_raw_data_input.read(raw_data_input) == RTT::NewData)
         buffer_size += handleRawPacket(raw_data_input, buffer_size);
-
     while(checkRawDataTransmission())
         buffer_size -= sendOnePacket();
-
     while(hasRawData(queueRawPacketOnTheWay))
     {
         _raw_data_output.write(queueRawPacketOnTheWay.front());
@@ -82,17 +83,15 @@ void Task::updateHook()
     SendIM send_im;
     while(_message_input.read(send_im) == RTT::NewData)
         enqueueSendIM(send_im);
-
     while(checkIMStatus(im_status))
     {
         im_attempts = defineAttempts();
         im_status = processIM(im_status);
     }
-
     DeliveryStatus delivery_status;
     while( (delivery_status = checkDelivery(im_status, im_attempts)) != PENDING
             && im_status.status == PENDING)
-        im_status = updateDelivery(im_status, delivery_status);
+            im_status = updateDelivery(im_status, delivery_status);
 
 }
 void Task::errorHook()
@@ -112,6 +111,7 @@ void Task::cleanupHook()
     // Well, it's on the way, the receiver must deal with this data. ¯\_(ツ)_/¯
     buffer_size = 0;
     im_status.status = EMPTY;
+    last_write_raw_packet = base::Time::fromSeconds(0);
 }
 
 
@@ -151,9 +151,9 @@ bool Task::checkRawDataTransmission(void)
 {
     if(queueRawPacket.empty())
         return false;
-    if(queueRawPacketOnTheWay.empty())
+    if(last_write_raw_packet.toSeconds() == 0)
         return true;
-    if(!controlBitRate(queueRawPacket.front().data, queueRawPacketOnTheWay.back().time, raw_bitrate))
+    if(!controlBitRate(queueRawPacket.front().data, last_write_raw_packet, raw_bitrate))
         return false;
     return true;
 }
@@ -164,6 +164,7 @@ int Task::sendOnePacket(void)
         return 0;
     iodrivers_base::RawPacket on_the_way = queueRawPacket.front();
     on_the_way.time = base::Time::now();
+    last_write_raw_packet = on_the_way.time;
     // Don't lose packet
    if(rand() % 100 < probability_good_transmission)
         queueRawPacketOnTheWay.push(on_the_way);
