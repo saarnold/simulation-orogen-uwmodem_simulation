@@ -6,7 +6,7 @@
 #include "uwmodem_simulation/TaskBase.hpp"
 #include "usbl_evologics/Driver.hpp"
 #include <iostream>
-#include <sstream>
+#include <boost/random.hpp>
 #include <queue>
 
 namespace uwmodem_simulation{
@@ -41,7 +41,10 @@ namespace uwmodem_simulation{
 
         int im_retry;
         int im_attempts;
-        int probability_good_transmission;
+
+        boost::random::mt19937 generator;
+        boost::random::bernoulli_distribution<> dist;
+
         usbl_evologics::InterfaceType interface;
 
         // Queue of RawPacket waintg in internal buffer to be transmitted.

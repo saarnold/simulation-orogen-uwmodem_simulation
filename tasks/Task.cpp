@@ -33,10 +33,10 @@ bool Task::configureHook()
     interface = _receiver_interface.get();
     status_period = base::Time::fromSeconds(1);
     travel_time = base::Time::fromSeconds(_distance.get()/sound_velocity);
-    probability_good_transmission = _probability.get();
+    boost::random::bernoulli_distribution<> bernoulli((double)_probability.get()/100);
+    dist = bernoulli;
     im_retry = _im_retry.get();
     im_status.status = EMPTY;
-    srand (base::Time::now().toSeconds());
     last_write_raw_packet = base::Time::fromSeconds(0);
 
     return true;
@@ -166,7 +166,7 @@ int Task::sendOnePacket(void)
     on_the_way.time = base::Time::now();
     last_write_raw_packet = on_the_way.time;
     // Don't lose packet
-   if(rand() % 100 < probability_good_transmission)
+   if(dist(generator))
         queueRawPacketOnTheWay.push(on_the_way);
     queueRawPacket.pop();
     return on_the_way.data.size();
@@ -245,7 +245,7 @@ MessageStatus Task::processIM(const MessageStatus &im_status)
 int Task::defineAttempts(void)
 {
     int attempts = 1;
-    while ((rand() % 100 > probability_good_transmission) && (attempts <= im_retry))
+    while (dist(generator) && (attempts <= im_retry))
         attempts++;
     return attempts;
 }
@@ -260,7 +260,7 @@ DeliveryStatus Task::checkDelivery(const MessageStatus &im_status, int attempts)
     if(!checkTravelTime(im_status.time, travel_time*path))
         return PENDING;
     // Lose Instant Message in last try
-    if(rand() % 100 > probability_good_transmission && attempts == im_retry+1)
+    if(!dist(generator) && attempts == im_retry+1)
         return FAILED;
     return DELIVERED;
 }

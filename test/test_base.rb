@@ -44,11 +44,35 @@ describe  'uwmodem_simulation::Task' do
         prob = 70
         simulator.probability = prob
         simulator.distance = 0.01
+        simulator.im_retry = 0
         simulator.configure
         simulator.start
 
         succes = 0
-        total = 10
+        total = 100
+
+        for i in 0...total
+            message_input.write msg("message number #{i}")
+            if sample = get_one_new_sample(message_output, 0.5)
+                #puts "#{sample.buffer.to_byte_array[8..-1].inspect}"
+                succes += 1
+            end
+        end
+        assert_in_delta succes*100/total, prob, 10
+    end
+
+    it 'count rate of good IM transmission with 1 retry' do
+        prob = 70
+        simulator.probability = prob
+        simulator.distance = 0.01
+        simulator.im_retry = 1
+        simulator.configure
+        simulator.start
+
+        prob = 91 #100*(0.7 + 0.3*0.7)
+
+        succes = 0
+        total = 100
 
         for i in 0...total
             message_input.write msg("message number #{i}")
@@ -56,18 +80,19 @@ describe  'uwmodem_simulation::Task' do
                 succes += 1
             end
         end
-        assert_in_delta succes*100/total, prob, 30
+        assert_in_delta succes*100/total, prob, 10
     end
 
     it 'check bitrate of IM transmission' do
         simulator.distance = 0.01
+        simulator.probability = 100
         simulator.configure
         simulator.start
 
         message_input.write msg("message number 1")
         message_input.write msg("message number 2")
-        sample1 = assert_has_one_new_sample(message_output)
-        sample2 = assert_has_one_new_sample(message_output)
+        sample1 = assert_has_one_new_sample(message_output, 5)
+        sample2 = assert_has_one_new_sample(message_output, 5)
         bitrate = sample2.buffer.size*8 / (sample2.time - sample1.time)
         assert_operator bitrate, :<=, 976
     end
@@ -146,7 +171,7 @@ describe  'uwmodem_simulation::Task' do
         simulator.start
 
         succes = 0
-        total = 10
+        total = 100
 
         for i in 0...total
             raw_data_input.write data("message number #{i}")
@@ -154,7 +179,7 @@ describe  'uwmodem_simulation::Task' do
                 succes += 1
             end
         end
-        assert_in_delta succes*100/total, prob, 30
+        assert_in_delta succes*100/total, prob, 15
     end
 
 end
