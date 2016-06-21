@@ -10,7 +10,7 @@ describe  'uwmodem_simulation::Task' do
     writer 'simulator', 'raw_data_input', attr_name: 'raw_data_input', type: :buffer, size: 50
     reader 'simulator', 'message_output', attr_name: 'message_output', type: :buffer, size: 50
     reader 'simulator', 'raw_data_output', attr_name: 'raw_data_output', type: :buffer, size: 50
-    reader 'simulator', 'message_status', attr_name: 'message_status', type: :buffer, size: 50
+    reader 'simulator', 'message_status', attr_name: 'message_status'
 
     def data(text)
         data = simulator.raw_data_input.new_sample
@@ -83,6 +83,44 @@ describe  'uwmodem_simulation::Task' do
         assert_in_delta succes*100/total, prob, 10
     end
 
+    it 'check delivery status of IM' do
+        prob = 70
+        simulator.probability = prob
+        simulator.distance = 0.01
+        simulator.im_retry = 0
+        simulator.configure
+        simulator.start
+
+        sample_status = Types::UsblEvologics::MessageStatus.new
+        sample_status.status = :EMPTY
+
+        total = 10
+
+        for i in 0...total
+            str_msg = msg("message number #{i}")
+            message_input.write str_msg
+
+            sample_status = assert_has_one_new_sample(message_status)
+
+            while sample_status.status == :EMPTY || sample_status.status == :PENDING ||
+                (sample_status.status == :FAILED && sample_status.sendIm.buffer.empty?)
+                sample_status = assert_has_one_new_sample(message_status)
+            end
+
+            assert str_msg.buffer.size == sample_status.sendIm.buffer.size
+            (0..(str_msg.buffer.size-1)).each do |index|
+                assert str_msg.buffer[index] == sample_status.sendIm.buffer[index]
+            end
+
+            if sample = get_one_new_sample(message_output, 0.5)
+                assert sample.buffer.size == sample_status.sendIm.buffer.size
+                (0..(sample.buffer.size-1)).each do |index|
+                    assert sample.buffer[index] == sample_status.sendIm.buffer[index]
+                end
+            end
+        end
+    end
+
     it 'check bitrate of IM transmission' do
         simulator.distance = 0.01
         simulator.probability = 100
@@ -109,6 +147,30 @@ describe  'uwmodem_simulation::Task' do
         travel_time = 750*2/1500
 
         assert sample.duration.to_i == travel_time
+    end
+
+    it 'check for full IM queue' do
+        simulator.configure
+        simulator.start
+
+        for i in 0..300
+            message_input.write msg("message")
+        end
+        assert_state_change(simulator) { |s| s == :FULL_IM_QUEUE }
+        sample = assert_has_one_new_sample(message_output)
+    end
+
+    it 'check for long IM' do
+        simulator.configure
+        simulator.start
+
+        string = "message"
+        for i in 0..100
+            string += " add more data"
+        end
+        message_input.write msg(string)
+
+        assert_state_change(simulator) { |s| s == :HUGE_INSTANT_MESSAGE }
     end
 
     it 'check travel time of raw data transmission' do
@@ -180,6 +242,23 @@ describe  'uwmodem_simulation::Task' do
             end
         end
         assert_in_delta succes*100/total, prob, 15
+    end
+
+    it 'count packet size for serial connection' do
+        prob = 100
+        simulator.probability = prob
+        simulator.distance = 0.01
+        simulator.configure
+        simulator.start
+
+        number = 0
+
+        raw_data_input.write data("message size: 16")
+        while sample = get_one_new_sample(raw_data_output, 0.5)
+            assert sample.data.size, 2
+            number += 1
+        end
+        assert number, 8
     end
 
 end
