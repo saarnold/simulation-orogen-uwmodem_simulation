@@ -33,15 +33,22 @@ namespace uwmodem_simulation{
         base::Time travel_time;
         static const int sound_velocity = 1500;
 
+        // Constant bitrate for Instant Message
         static const int im_bitrate = 976;
-        static const int raw_bitrate = 1600;
+        // Configurable bitrate for Raw Data transmission
+        int raw_bitrate;
+        // Size of tiny RawPackets. Raw Data is break in tiny packets
         static const int packet_size = 20;
+        // Internal buffer for Raw Data
         static const int transmission_buffer_size = 16384;
+        // Account buffer used
         int buffer_size;
-
+        // Max times a transmission of Instant Message can be performed
         int im_retry;
+        // Account Instant Message attempts
         int im_attempts;
 
+        // Bernoulli distribution stuff
         boost::random::mt19937 generator;
         boost::random::bernoulli_distribution<> dist;
 

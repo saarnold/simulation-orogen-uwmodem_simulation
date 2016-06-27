@@ -41,7 +41,7 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'count rate of good IM transmission' do
-        prob = 70
+        prob = 0.7
         simulator.probability = prob
         simulator.distance = 0.01
         simulator.im_retry = 0
@@ -58,18 +58,18 @@ describe  'uwmodem_simulation::Task' do
                 succes += 1
             end
         end
-        assert_in_delta succes*100/total, prob, 10
+        assert_in_delta succes/total.to_f, prob, 0.1
     end
 
     it 'count rate of good IM transmission with 1 retry' do
-        prob = 70
+        prob = 0.7
         simulator.probability = prob
         simulator.distance = 0.01
         simulator.im_retry = 1
         simulator.configure
         simulator.start
 
-        prob = 91 #100*(0.7 + 0.3*0.7)
+        prob = 0.91 #(0.7 + 0.3*0.7)
 
         succes = 0
         total = 100
@@ -80,11 +80,11 @@ describe  'uwmodem_simulation::Task' do
                 succes += 1
             end
         end
-        assert_in_delta succes*100/total, prob, 10
+        assert_in_delta succes/total.to_f, prob, 0.1
     end
 
     it 'check delivery status of IM' do
-        prob = 70
+        prob = 0.7
         simulator.probability = prob
         simulator.distance = 0.01
         simulator.im_retry = 0
@@ -123,7 +123,7 @@ describe  'uwmodem_simulation::Task' do
 
     it 'check bitrate of IM transmission' do
         simulator.distance = 0.01
-        simulator.probability = 100
+        simulator.probability = 1
         simulator.configure
         simulator.start
 
@@ -189,6 +189,8 @@ describe  'uwmodem_simulation::Task' do
 
     it 'check birate of raw data transmission in short distance' do
         simulator.distance = 0.1
+        bitrate = 1600
+        simulator.bitrate = bitrate
         simulator.configure
         simulator.start
 
@@ -203,11 +205,13 @@ describe  'uwmodem_simulation::Task' do
         sample2 = assert_has_one_new_sample(raw_data_output, 10)
 
         bitrate = sample2.data.size*8 / (sample2.time - sample1.time)
-        assert_operator bitrate, :<=, 1600
+        assert_operator bitrate, :<=, bitrate
     end
 
     it 'check birate of raw data transmission for long distance' do
         simulator.distance = 500
+        bitrate = 1600
+        simulator.bitrate = bitrate
         simulator.configure
         simulator.start
 
@@ -222,13 +226,14 @@ describe  'uwmodem_simulation::Task' do
         sample2 = assert_has_one_new_sample(raw_data_output, 10)
 
         bitrate = sample2.data.size*8 / (sample2.time - sample1.time)
-        assert_operator bitrate, :<=, 1600
+        assert_operator bitrate, :<=, bitrate
     end
 
     it 'count rate of good raw data transmission' do
-        prob = 70
+        prob = 0.7
         simulator.probability = prob
         simulator.distance = 0.01
+        simulator.bitrate = 800000
         simulator.configure
         simulator.start
 
@@ -236,16 +241,16 @@ describe  'uwmodem_simulation::Task' do
         total = 100
 
         for i in 0...total
-            raw_data_input.write data("message number #{i}")
-            if sample = get_one_new_sample(raw_data_output, 0.5)
+            raw_data_input.write data("message #{i}")
+            while sample = get_one_new_sample(raw_data_output, 0.5)
                 succes += 1
             end
         end
-        assert_in_delta succes*100/total, prob, 15
+        assert_in_delta succes/total.to_f, prob, 0.15
     end
 
     it 'count packet size for serial connection' do
-        prob = 100
+        prob = 1
         simulator.probability = prob
         simulator.distance = 0.01
         simulator.configure

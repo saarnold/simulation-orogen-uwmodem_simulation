@@ -33,10 +33,11 @@ bool Task::configureHook()
     interface = _receiver_interface.get();
     status_period = base::Time::fromSeconds(1);
     travel_time = base::Time::fromSeconds(_distance.get()/sound_velocity);
-    boost::random::bernoulli_distribution<> bernoulli((double)_probability.get()/100);
+    boost::random::bernoulli_distribution<> bernoulli((double)_probability.get());
     dist = bernoulli;
     im_retry = _im_retry.get();
     im_status.status = EMPTY;
+    raw_bitrate = _bitrate.get();
     last_write_raw_packet = base::Time::fromSeconds(0);
 
     return true;

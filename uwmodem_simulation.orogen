@@ -16,11 +16,13 @@ task_context "Task" do
     # Set average distance in meters between modems.
     # It affects the transfer delay. It does not affect the rate of lost data.
     property "distance", "double", 300
-    # Set probability of good transmission in %
+    # Set probability of good transmission, 0-1
     # It will affect the lost of data
-    property "probability", "int", 90
+    property "probability", "double", 0.9
     # Instant Message retry. How many retries should be made in case of failure.
     property "im_retry", "int", 1
+    # Define bitrate of raw_data_transmission
+    property "bitrate", "int", 1600
 
     ###################################
     ##   Input ports
