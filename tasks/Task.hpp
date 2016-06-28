@@ -8,6 +8,7 @@
 #include <iostream>
 #include <boost/random.hpp>
 #include <queue>
+#include <utility>
 
 namespace uwmodem_simulation{
 
@@ -54,15 +55,16 @@ namespace uwmodem_simulation{
 
         usbl_evologics::InterfaceType interface;
 
-        // Queue of RawPacket waintg in internal buffer to be transmitted.
-        std::queue<iodrivers_base::RawPacket> queueRawPacket;
-        // Queue of RawPacket been transmitted
-        std::queue<iodrivers_base::RawPacket> queueRawPacketOnTheWay;
-        // Queue of Instant Messages from transmitter to receiver.
-        std::queue<usbl_evologics::SendIM> queueSendIM;
+        // Queue of RawPacket waintg in internal buffer to be transmitted, second received time
+        std::queue< std::pair <iodrivers_base::RawPacket, base::Time> > queueRawPacket;
+        // Queue of RawPacket been transmitted. First packet, second transmission star time
+        std::queue< std::pair <iodrivers_base::RawPacket, base::Time> > queueRawPacketOnTheWay;
+        // Queue of Instant Messages from transmitter to receiver. First IM, second received time
+        std::queue< std::pair <usbl_evologics::SendIM, base::Time> > queueSendIM;
 
-        // Instant Message been delivered.
-        usbl_evologics::MessageStatus im_status;
+        // Instant Message been delivered. First status, second starting count time
+        std::pair <usbl_evologics::MessageStatus, base::Time> im_status;
+        // usbl_evologics::MessageStatus im_status;
 
         static const size_t MAX_QUEUE_MSG_SIZE = 100;
         static const size_t MAX_MSG_SIZE = 64;
@@ -200,7 +202,21 @@ namespace uwmodem_simulation{
          * @param last_write. A packet was transmitted.
          * return bool. Output RawPacket if true
          */
-        bool hasRawData(const std::queue<iodrivers_base::RawPacket> &queuRawData);
+        bool hasRawData(const std::queue< std::pair <iodrivers_base::RawPacket, base::Time> > &queuRawData);
+
+        /** Update timestamp of Sample
+         *
+         * @param sample to be update.
+         * @param start_time.
+         * @return Update sample
+         */
+        template<typename Type>
+        Type updateSampleTime(const Type &sample, base::Time start_time)
+        {
+            Type output = sample;
+            output.time = output.time + (base::Time::now() - start_time);
+            return output;
+        }
 
         /** Check if status allows transmission of Instant MessageStatus
          *
@@ -234,7 +250,7 @@ namespace uwmodem_simulation{
           * @param attempts. How many times the message will be sent till receives an ack.
           * @return Delivery status.
           */
-         usbl_evologics::DeliveryStatus checkDelivery(const usbl_evologics::MessageStatus &im_status, int attempts);
+         usbl_evologics::DeliveryStatus checkDelivery(const std::pair <usbl_evologics::MessageStatus, base::Time> &im_status, int attempts);
 
          /** Update output ports according delivery os instant message
           *
@@ -242,14 +258,14 @@ namespace uwmodem_simulation{
           * @param delivery. FAILED or DELIVERED
           * @return update im_status
           */
-         usbl_evologics::MessageStatus updateDelivery(const usbl_evologics::MessageStatus &im_status, const usbl_evologics::DeliveryStatus &delivery);
+         usbl_evologics::MessageStatus updateDelivery(const std::pair<usbl_evologics::MessageStatus, base::Time> &im_status, const usbl_evologics::DeliveryStatus &delivery);
 
          /** Turn a SendIM in a ReceiveIM
           *
           * @param send_im. Instant Message to be converted
           * @return ReceiveIM
           */
-         usbl_evologics::ReceiveIM toReceivedIM(const usbl_evologics::SendIM &send_im);
+         usbl_evologics::ReceiveIM toReceivedIM(const usbl_evologics::SendIM &send_im, base::Time start_delivery);
     };
 }
 

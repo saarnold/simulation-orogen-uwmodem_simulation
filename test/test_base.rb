@@ -122,17 +122,23 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'check bitrate of IM transmission' do
-        simulator.distance = 0.01
+        simulator.distance = 0
         simulator.probability = 1
+        simulator.im_retry = 0
         simulator.configure
         simulator.start
 
-        message_input.write msg("message number 1")
-        message_input.write msg("message number 2")
+        msg =  msg("message")
+        msg.deliveryReport = false
+        message_input.write msg
+        msg.time = Time.now
+        message_input.write msg
+
         sample1 = assert_has_one_new_sample(message_output, 5)
         sample2 = assert_has_one_new_sample(message_output, 5)
-        bitrate = sample2.buffer.size*8 / (sample2.time - sample1.time)
-        assert_operator bitrate, :<=, 976
+        bitrate = sample2.buffer.size*8 / (sample2.time - sample1.time).to_f
+
+        assert_operator bitrate, :<= ,976
     end
 
     it 'check travel time of IM transmission' do
@@ -146,7 +152,7 @@ describe  'uwmodem_simulation::Task' do
         # Delivery and ack
         travel_time = 750*2/1500
 
-        assert sample.duration.to_i == travel_time
+        assert_in_delta sample.duration.to_f, travel_time, travel_time/10.to_f
     end
 
     it 'check for full IM queue' do
@@ -182,20 +188,19 @@ describe  'uwmodem_simulation::Task' do
         raw_data_input.write data
         sample = assert_has_one_new_sample(raw_data_output, 10)
         # one way delivry
-        travel_time = 750/1500
-
-        assert (sample.time - data.time).to_i == travel_time
+        travel_time = 750/1500.to_f
+        assert_in_delta (sample.time - data.time).to_f, travel_time, travel_time/10
     end
 
     it 'check birate of raw data transmission in short distance' do
         simulator.distance = 0.1
-        bitrate = 1600
-        simulator.bitrate = bitrate
+        expected_bitrate = 1600
+        simulator.bitrate = expected_bitrate
         simulator.configure
         simulator.start
 
         string = "message"
-        for i in 0..100
+        for i in 0..10
             string += " add more data"
         end
         data = data(string)
@@ -204,29 +209,30 @@ describe  'uwmodem_simulation::Task' do
         sample1 = assert_has_one_new_sample(raw_data_output, 10)
         sample2 = assert_has_one_new_sample(raw_data_output, 10)
 
-        bitrate = sample2.data.size*8 / (sample2.time - sample1.time)
-        assert_operator bitrate, :<=, bitrate
+
+        bitrate = sample2.data.size*8 / (sample2.time - sample1.time).to_f
+        assert_in_delta bitrate, expected_bitrate, expected_bitrate/10.to_f
     end
 
     it 'check birate of raw data transmission for long distance' do
         simulator.distance = 500
-        bitrate = 1600
-        simulator.bitrate = bitrate
+        expected_bitrate = 1600
+        simulator.bitrate = expected_bitrate
         simulator.configure
         simulator.start
 
         string = "message"
-        for i in 0..100
+        for i in 0..10
             string += " add more data"
         end
         data = data(string)
         raw_data_input.write data
 
-        sample1 = assert_has_one_new_sample(raw_data_output, 10)
-        sample2 = assert_has_one_new_sample(raw_data_output, 10)
+        sample1 = assert_has_one_new_sample(raw_data_output, 1)
+        sample2 = assert_has_one_new_sample(raw_data_output, 1)
 
-        bitrate = sample2.data.size*8 / (sample2.time - sample1.time)
-        assert_operator bitrate, :<=, bitrate
+        bitrate = sample2.data.size*8 / (sample2.time - sample1.time).to_f
+        assert_in_delta bitrate, expected_bitrate, expected_bitrate/10.to_f
     end
 
     it 'count rate of good raw data transmission' do
@@ -253,6 +259,7 @@ describe  'uwmodem_simulation::Task' do
         prob = 1
         simulator.probability = prob
         simulator.distance = 0.01
+        simulator.receiver_interface = :SERIAL
         simulator.configure
         simulator.start
 
@@ -260,10 +267,71 @@ describe  'uwmodem_simulation::Task' do
 
         raw_data_input.write data("message size: 16")
         while sample = get_one_new_sample(raw_data_output, 0.5)
-            assert sample.data.size, 2
+            assert_equal sample.data.size, 2
             number += 1
         end
-        assert number, 8
+        assert_equal number, 8
+    end
+
+    it 'check for logical time in raw data transmission' do
+        simulator.probability = 1
+        simulator.distance = 750
+        simulator.configure
+        simulator.start
+
+        travel_time = 750/1500.to_f
+
+        data = data("message size: 16")
+        data.time = Time.utc(2000,"jan",1,20,15,1)
+
+        raw_data_input.write data
+        sample = assert_has_one_new_sample(raw_data_output, 5)
+        assert_in_delta (sample.time - data.time).to_f, travel_time, travel_time/10.to_f
+    end
+
+    it 'check for logical time in IM transmission' do
+        simulator.probability = 1
+        simulator.distance = 750
+        simulator.im_retry = 0
+        simulator.configure
+        simulator.start
+
+        travel_time = 2*750/1500.to_f
+
+        msg = msg("message size: 16")
+        msg.time = Time.utc(2000,"jan",1,20,15,1)
+
+        message_input.write msg
+        sample = assert_has_one_new_sample(message_output, 5)
+        assert_in_delta (sample.time - msg.time).to_f, travel_time, travel_time/10.to_f
+    end
+
+    it 'check for jumping in time in im_status due first input sample' do
+        simulator.probability = 1
+        simulator.distance = 750
+        simulator.im_retry = 0
+        simulator.configure
+        simulator.start
+
+        # im_status starting with time 0
+        sample_status1 = assert_has_one_new_sample(message_status, 1)
+        assert_in_delta (sample_status1.time).to_f, 0, 1.to_f
+        sleep(5)
+        sample_status2 = assert_has_one_new_sample(message_status, 1)
+        assert_in_delta (sample_status2.time - sample_status1.time).to_f, 5, 1
+
+        msg = msg("message size: 16")
+        msg.time = Time.utc(2000,"jan",1,20,15,1)
+
+        message_input.write msg
+        sample = assert_has_one_new_sample(message_output, 5)
+
+        # im_status now have the timestamp equivalet of the input IM
+        sample_status1 = assert_has_one_new_sample(message_status, 1)
+        assert_in_delta (sample_status1.time).to_f, msg.time.to_f, 2
+        sleep(5)
+        sample_status2 = assert_has_one_new_sample(message_status, 1)
+        assert_in_delta (sample_status2.time - sample_status1.time).to_f, 5, 1.5
     end
 
 end
