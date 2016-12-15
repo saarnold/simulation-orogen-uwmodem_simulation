@@ -57,14 +57,13 @@ namespace uwmodem_simulation{
 
         // Queue of RawPacket waintg in internal buffer to be transmitted, second received time
         std::queue< std::pair <iodrivers_base::RawPacket, base::Time> > queueRawPacket;
-        // Queue of RawPacket been transmitted. First packet, second transmission star time
+        // Queue of RawPacket been transmitted. First packet, second transmission start time
         std::queue< std::pair <iodrivers_base::RawPacket, base::Time> > queueRawPacketOnTheWay;
         // Queue of Instant Messages from transmitter to receiver. First IM, second received time
         std::queue< std::pair <usbl_evologics::SendIM, base::Time> > queueSendIM;
 
         // Instant Message been delivered. First status, second starting count time
         std::pair <usbl_evologics::MessageStatus, base::Time> im_status;
-        // usbl_evologics::MessageStatus im_status;
 
         static const size_t MAX_QUEUE_MSG_SIZE = 100;
         static const size_t MAX_MSG_SIZE = 64;
@@ -160,16 +159,15 @@ namespace uwmodem_simulation{
 
         /** Handle received RawPacket
          *
-         * @param queueRawPacket. Whre the RawPacket is stored.
          * @param input_data. Data to be handled
          * @param buffer_size. Actual filled buffer
          * @return increment in buffer_size (internal buffer)
          */
         int handleRawPacket(const iodrivers_base::RawPacket &input_data, int buffer_size);
 
-        /** Check if is possible to transmit a new RawPacket
+        /** Check if it's possible to transmit a new RawPacket
          *
-         * @return true if is possible to transmit a RawPacket
+         * @return true if it's possible to transmit a RawPacket
          */
         bool checkRawDataTransmission(void);
 
@@ -191,15 +189,15 @@ namespace uwmodem_simulation{
         /** Control bitrate of Rawpacket
          *
          * @param input_data, RawPacket to be transmitted
-         * @param last_time, lat time a data was delivered
-         * @param bool. If this rate respect the limit.
+         * @param last_time, last time a data was delivered
+         * @param bitrate. Limit bitrate the transmission of data should respect.
+         * @return bool. If this rate respect the limit.
          */
         bool controlBitRate(const std::vector<uint8_t> &data, base::Time last_time, int bitrate);
 
         /** Check if RawPacket can be output at receiver
          *
-         * @param queueRawData
-         * @param last_write. A packet was transmitted.
+         * @param queueRawData. Pair of RawData and start of transmission
          * return bool. Output RawPacket if true
          */
         bool hasRawData(const std::queue< std::pair <iodrivers_base::RawPacket, base::Time> > &queuRawData);
@@ -252,7 +250,7 @@ namespace uwmodem_simulation{
           */
          usbl_evologics::DeliveryStatus checkDelivery(const std::pair <usbl_evologics::MessageStatus, base::Time> &im_status, int attempts);
 
-         /** Update output ports according delivery os instant message
+         /** Update output ports according delivery of instant message
           *
           * @im_status. To be update
           * @param delivery. FAILED or DELIVERED

@@ -181,19 +181,21 @@ describe  'uwmodem_simulation::Task' do
 
     it 'check travel time of raw data transmission' do
         simulator.distance = 750
+        simulator.probability = 1
         simulator.configure
         simulator.start
 
         data = data("message")
         raw_data_input.write data
-        sample = assert_has_one_new_sample(raw_data_output, 10)
+        sample = assert_has_one_new_sample raw_data_output, 10
         # one way delivry
         travel_time = 750/1500.to_f
-        assert_in_delta (sample.time - data.time).to_f, travel_time, travel_time/10
+        assert_in_delta (sample.time - data.time).to_f, travel_time, travel_time/10.to_f
     end
 
     it 'check birate of raw data transmission in short distance' do
         simulator.distance = 0.1
+        simulator.probability = 1
         expected_bitrate = 1600
         simulator.bitrate = expected_bitrate
         simulator.configure
@@ -216,6 +218,7 @@ describe  'uwmodem_simulation::Task' do
 
     it 'check birate of raw data transmission for long distance' do
         simulator.distance = 500
+        simulator.probability = 1
         expected_bitrate = 1600
         simulator.bitrate = expected_bitrate
         simulator.configure
@@ -228,8 +231,8 @@ describe  'uwmodem_simulation::Task' do
         data = data(string)
         raw_data_input.write data
 
-        sample1 = assert_has_one_new_sample(raw_data_output, 1)
-        sample2 = assert_has_one_new_sample(raw_data_output, 1)
+        sample1 = assert_has_one_new_sample raw_data_output, 1
+        sample2 = assert_has_one_new_sample raw_data_output, 1
 
         bitrate = sample2.data.size*8 / (sample2.time - sample1.time).to_f
         assert_in_delta bitrate, expected_bitrate, expected_bitrate/10.to_f
@@ -270,7 +273,7 @@ describe  'uwmodem_simulation::Task' do
             assert_equal sample.data.size, 2
             number += 1
         end
-        assert_equal number, 8
+        assert_equal 8, number
     end
 
     it 'check for logical time in raw data transmission' do

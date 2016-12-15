@@ -35,6 +35,7 @@ bool Task::configureHook()
     dist = bernoulli;
     im_retry = _im_retry.get();
     raw_bitrate = _bitrate.get();
+    buffer_size = 0;
     interface = _receiver_interface.get();
     im_status.first.status = EMPTY;
     im_status.first.time = base::Time::fromSeconds(0);
@@ -69,7 +70,7 @@ void Task::updateHook()
      */
     iodrivers_base::RawPacket raw_data_input;
     while(_raw_data_input.read(raw_data_input) == RTT::NewData)
-            buffer_size += handleRawPacket(raw_data_input, buffer_size);
+        buffer_size += handleRawPacket(raw_data_input, buffer_size);
     while(checkRawDataTransmission())
         buffer_size -= sendOnePacket();
     while(hasRawData(queueRawPacketOnTheWay))
