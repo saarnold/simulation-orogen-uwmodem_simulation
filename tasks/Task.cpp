@@ -42,6 +42,9 @@ bool Task::configureHook()
     im_status.second = base::Time::now();
     last_write_raw_packet = base::Time::fromSeconds(0);
     status_period = base::Time::fromSeconds(1);
+    // Initial position at origin for both devices.
+    local_position.position = base::Vector3d::Zero();
+    remote_position.position = base::Vector3d::Zero();
 
     return true;
 }
@@ -63,6 +66,9 @@ void Task::updateHook()
         last_status = base::Time::now();
         // Keep delivery time in im_status
         _message_status.write(updateSampleTime(im_status.first, im_status.second));
+
+        double distance = (local_position.position - remote_position.position).norm();
+        travel_time = base::Time::fromSeconds(distance/sound_velocity);
     }
 
     /**
@@ -95,6 +101,21 @@ void Task::updateHook()
             && im_status.first.status == PENDING)
             im_status = std::make_pair (updateDelivery(im_status, delivery_status), base::Time::now());
 
+    /**
+     * Handle Position
+     */
+    base::samples::RigidBodyState pose;
+    if(_local_position.read(pose) == RTT::NewData)
+    {
+        if(pose.hasValidPosition())
+            local_position = pose;
+    }
+
+    if(_remote_position.read(pose) == RTT::NewData)
+    {
+        if(pose.hasValidPosition())
+            remote_position = pose;
+    }
 }
 void Task::errorHook()
 {

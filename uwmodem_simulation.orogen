@@ -33,6 +33,12 @@ task_context "Task" do
     # Raw data to be sent to remote device
     input_port "raw_data_input", "/iodrivers_base/RawPacket"
 
+    # Position in world frame of the local device
+    input_port "local_position", "/base/samples/RigidBodyState"
+
+    # Position in world frame of the remote device
+    input_port "remote_position", "/base/samples/RigidBodyState"
+
     ###################################
     ##   Output ports
     ###################################

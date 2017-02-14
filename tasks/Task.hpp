@@ -73,6 +73,8 @@ namespace uwmodem_simulation{
         base::Time status_period;
         base::Time last_status;
 
+        base::samples::RigidBodyState local_position;
+        base::samples::RigidBodyState remote_position;
     public:
         /** TaskContext constructor for Task
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
