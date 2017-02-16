@@ -13,9 +13,6 @@ task_context "Task" do
     # This will affect the rate of transmission data in raw_data_output
     # For SERIAL it is 2 bytes/Rawpacket. For ETHERNET it is a direct transmission.
     property "receiver_interface", "/usbl_evologics/InterfaceType", :ETHERNET
-    # Set average distance in meters between modems.
-    # It affects the transfer delay. It does not affect the rate of lost data.
-    property "distance", "double", 300
     # Set probability of good transmission, 0-1
     # It will affect the lost of data
     property "probability", "double", 0.9

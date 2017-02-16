@@ -6,12 +6,12 @@ using namespace uwmodem_simulation;
 using namespace usbl_evologics;
 
 Task::Task(std::string const& name)
-    : TaskBase(name)
+    : TaskBase(name), generator(base::Time::now().toMicroseconds())
 {
 }
 
 Task::Task(std::string const& name, RTT::ExecutionEngine* engine)
-    : TaskBase(name, engine)
+    : TaskBase(name, engine), generator(base::Time::now().toMicroseconds())
 {
 }
 
@@ -30,8 +30,8 @@ bool Task::configureHook()
     if (! TaskBase::configureHook())
         return false;
 
-    travel_time = base::Time::fromSeconds(_distance.get()/sound_velocity);
-    boost::random::bernoulli_distribution<> bernoulli((double)_probability.get());
+    last_probability = _probability.get();
+    boost::random::bernoulli_distribution<> bernoulli(last_probability);
     dist = bernoulli;
     im_retry = _im_retry.get();
     raw_bitrate = _bitrate.get();
@@ -66,9 +66,6 @@ void Task::updateHook()
         last_status = base::Time::now();
         // Keep delivery time in im_status
         _message_status.write(updateSampleTime(im_status.first, im_status.second));
-
-        double distance = (local_position.position - remote_position.position).norm();
-        travel_time = base::Time::fromSeconds(distance/sound_velocity);
     }
 
     /**
@@ -104,18 +101,37 @@ void Task::updateHook()
     /**
      * Handle Position
      */
+    bool new_pose = false;
     base::samples::RigidBodyState pose;
-    if(_local_position.read(pose) == RTT::NewData)
+    while(_local_position.read(pose) == RTT::NewData)
     {
         if(pose.hasValidPosition())
+        {
             local_position = pose;
+            new_pose = true;
+        }
     }
 
-    if(_remote_position.read(pose) == RTT::NewData)
+   while(_remote_position.read(pose) == RTT::NewData)
     {
         if(pose.hasValidPosition())
+        {
             remote_position = pose;
+            new_pose = true;
+        }
     }
+
+   if(new_pose)
+   {
+        travel_time = updateTravelTime(local_position, remote_position);
+        double prob = updateProbability(local_position, remote_position);
+        if(last_probability != prob)
+        {
+            boost::random::bernoulli_distribution<> bernoulli(prob);
+            dist = bernoulli;
+            last_probability = prob;
+        }
+   }
 }
 void Task::errorHook()
 {
@@ -329,4 +345,22 @@ ReceiveIM Task::toReceivedIM(const SendIM &send_im, base::Time start_delivery)
     msg.integrity = rand() % 60 + 90;
     msg.velocity = (rand() % 1000)/1000;
     return msg;
+}
+
+base::Time Task::updateTravelTime(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote)
+{
+    double distance = (local_position.position - remote_position.position).norm();
+    return base::Time::fromSeconds(distance/sound_velocity);
+}
+
+double Task::updateProbability(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote)
+{
+    // Out of water
+    if(local.position[2] > 0 || remote.position[2] > 0)
+        return 0;
+    // Out of range
+    double distance = (local_position.position - remote_position.position).norm();
+   if(distance > max_distance)
+       return 0;
+   return _probability.get();
 }
