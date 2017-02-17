@@ -320,7 +320,7 @@ describe  'uwmodem_simulation::Task' do
         assert_in_delta (sample.time - msg.time).to_f, travel_time, travel_time/10.to_f
     end
 
-    it 'check for jumping in time in im_status due first input sample' do
+    it 'im_status with time now' do
         simulator.probability = 1
         simulator.im_retry = 0
         simulator.configure
@@ -331,7 +331,7 @@ describe  'uwmodem_simulation::Task' do
         sleep(1)
         # im_status starting with time 0
         sample_status1 = assert_has_one_new_sample(message_status, 1)
-        assert_in_delta (sample_status1.time).to_f, 0, 1.to_f
+        assert_in_delta (sample_status1.time).to_f, (Time.now).to_f, 10.to_f
         sleep(5)
         sample_status2 = assert_has_one_new_sample(message_status, 1)
         assert_in_delta (sample_status2.time - sample_status1.time).to_f, 5, 1
@@ -344,7 +344,7 @@ describe  'uwmodem_simulation::Task' do
 
         # im_status now have the timestamp equivalet of the input IM
         sample_status1 = assert_has_one_new_sample(message_status, 1)
-        assert_in_delta (sample_status1.time).to_f, msg.time.to_f, 2
+        assert_in_delta (sample_status1.time).to_f, (Time.now).to_f, 2
         sleep(5)
         sample_status2 = assert_has_one_new_sample(message_status, 1)
         assert_in_delta (sample_status2.time - sample_status1.time).to_f, 5, 1.5

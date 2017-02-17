@@ -65,7 +65,9 @@ void Task::updateHook()
     {
         last_status = base::Time::now();
         // Keep delivery time in im_status
-        _message_status.write(updateSampleTime(im_status.first, im_status.second));
+        MessageStatus status_out = im_status.first;
+        status_out.time = base::Time::now();
+        _message_status.write(status_out);
     }
 
     /**
@@ -322,7 +324,7 @@ MessageStatus Task::updateDelivery(const std::pair<usbl_evologics::MessageStatus
         status.messageFailed++;
 
     status.status = delivery;
-    status = updateSampleTime(status, im_status.second);
+    status.time = base::Time::now();
     _message_status.write(status);
 
     if(delivery == DELIVERED)
