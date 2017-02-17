@@ -82,6 +82,8 @@ void Task::updateHook()
     {
         _raw_data_output.write(updateSampleTime(queueRawPacketOnTheWay.front().first, queueRawPacketOnTheWay.front().second));
         queueRawPacketOnTheWay.pop();
+        // In usbl, it provides a pose when raw data is transmitted. TODO check periodicty of output
+        usblPosition(local_position, remote_position);
     }
 
     /**
@@ -98,7 +100,7 @@ void Task::updateHook()
     DeliveryStatus delivery_status;
     while( (delivery_status = checkDelivery(im_status, im_attempts)) != PENDING
             && im_status.first.status == PENDING)
-            im_status = std::make_pair (updateDelivery(im_status, delivery_status), base::Time::now());
+        im_status = std::make_pair (updateDelivery(im_status, delivery_status), base::Time::now());
 
     /**
      * Handle Position
@@ -319,6 +321,9 @@ MessageStatus Task::updateDelivery(const std::pair<usbl_evologics::MessageStatus
         message_input.time = im_status.first.time;
         _message_output.write(toReceivedIM(message_input, im_status.second));
         status.messageDelivered++;
+        // In usbl, it provides a pose when a DELIVERED is received and there is no raw data
+        if(queueRawPacketOnTheWay.empty())
+            usblPosition(local_position, remote_position);
     }
     if(delivery == FAILED)
         status.messageFailed++;

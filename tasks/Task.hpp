@@ -277,7 +277,21 @@ namespace uwmodem_simulation{
           */
          base::Time updateTravelTime(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote);
 
+         /** Update probability according distance
+          * Return zero if out of range/water or the probability set in configure
+          *
+          * @param local device's position
+          * @param remote device's position
+          * @return probability
+          */ 
          double updateProbability(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote);
+
+         /** Provides pose of remote device in local device reference. To be implemented in derived class.
+          *
+          * @param local position in global frame
+          * @param remote position in global frame
+          */ 
+         virtual void usblPosition(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote){};
     };
 }
 

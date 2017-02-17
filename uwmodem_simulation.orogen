@@ -52,3 +52,21 @@ task_context "Task" do
 
     periodic 0.01
 end
+
+task_context "Usbl" do
+    subclasses "Task"
+
+    # Source frame of position_sample.
+    property "source_frame", "std/string", "auv"
+    # Target frame of position_sample.
+    property "target_frame", "std/string", "world_usbl"
+
+    # Position of remote device in usbl struct
+    output_port "usbl_position_samples", "/usbl_evologics/Position"
+    # Position of remote device
+    output_port "position_samples", "/base/samples/RigidBodyState"
+
+    # Direction of remote device in usbl struct
+    output_port "direction_samples", "/usbl_evologics/Direction"
+
+end
