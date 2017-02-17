@@ -60,6 +60,8 @@ task_context "Usbl" do
     property "source_frame", "std/string", "auv"
     # Target frame of position_sample.
     property "target_frame", "std/string", "world_usbl"
+    # Minimal periodicy which position is provided. Default 2 second
+    property "min_period", "base/Time"
 
     # Position of remote device in usbl struct
     output_port "usbl_position_samples", "/usbl_evologics/Position"

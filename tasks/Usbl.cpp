@@ -7,11 +7,13 @@ using namespace uwmodem_simulation;
 Usbl::Usbl(std::string const& name)
     : UsblBase(name)
 {
+    _min_period.set(base::Time::fromSeconds(2));
 }
 
 Usbl::Usbl(std::string const& name, RTT::ExecutionEngine* engine)
     : UsblBase(name, engine)
 {
+    _min_period.set(base::Time::fromSeconds(2));
 }
 
 Usbl::~Usbl()
@@ -55,6 +57,10 @@ void Usbl::cleanupHook()
 
 void Usbl::usblPosition(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote)
 {
+    if( (base::Time::now() - last_output_pose) < _min_period.get())
+        return;
+    last_output_pose = base::Time::now();
+
     if(dist(generator))
     {
         base::samples::RigidBodyState position;

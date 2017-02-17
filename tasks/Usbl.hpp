@@ -26,7 +26,7 @@ namespace uwmodem_simulation{
 	friend class UsblBase;
     protected:
 
-
+        base::Time last_output_pose;
 
     public:
         /** TaskContext constructor for Usbl

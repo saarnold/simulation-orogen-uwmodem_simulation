@@ -86,15 +86,12 @@ describe  'uwmodem_simulation::Usbl' do
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
-
         raw_data_input.write data("message_of_size_18")
         sample = get_one_new_sample(message_output, 3)
        
         total = 0
         for i in 0..5
-            if  position = get_one_new_sample(position_samples)
+            if  position = get_one_new_sample(position_samples, 0.5)
                 total += 1
             end
         end
@@ -109,19 +106,16 @@ describe  'uwmodem_simulation::Usbl' do
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
-
-        raw_data_input.write data("message_of_size_18")
+        raw_data_input.write data("message")
         sample = get_one_new_sample(message_output, 3)
        
         total = 0
-        for i in 0..5
-            if  position = get_one_new_sample(position_samples)
+        for i in 0..10
+            if  position = get_one_new_sample(position_samples, 0.5)
                 total += 1
             end
         end
-        assert_equal total, 1
+        assert_equal 1, total
     end
 
 end
