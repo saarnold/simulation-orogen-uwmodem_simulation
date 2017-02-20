@@ -6,12 +6,12 @@ using namespace uwmodem_simulation;
 using namespace usbl_evologics;
 
 Task::Task(std::string const& name)
-    : TaskBase(name)
+    : TaskBase(name), generator(base::Time::now().toMicroseconds())
 {
 }
 
 Task::Task(std::string const& name, RTT::ExecutionEngine* engine)
-    : TaskBase(name, engine)
+    : TaskBase(name, engine), generator(base::Time::now().toMicroseconds())
 {
 }
 
@@ -30,9 +30,8 @@ bool Task::configureHook()
     if (! TaskBase::configureHook())
         return false;
 
-    travel_time = base::Time::fromSeconds(_distance.get()/sound_velocity);
-    boost::random::bernoulli_distribution<> bernoulli((double)_probability.get());
-    dist = bernoulli;
+    last_probability = _probability.get();
+    dist = boost::random::bernoulli_distribution<>(last_probability);
     im_retry = _im_retry.get();
     raw_bitrate = _bitrate.get();
     buffer_size = 0;
@@ -42,6 +41,9 @@ bool Task::configureHook()
     im_status.second = base::Time::now();
     last_write_raw_packet = base::Time::fromSeconds(0);
     status_period = base::Time::fromSeconds(1);
+    // Initial position at origin for both devices.
+    local_position.position = base::Vector3d::Zero();
+    remote_position.position = base::Vector3d::Zero();
 
     return true;
 }
@@ -62,7 +64,9 @@ void Task::updateHook()
     {
         last_status = base::Time::now();
         // Keep delivery time in im_status
-        _message_status.write(updateSampleTime(im_status.first, im_status.second));
+        MessageStatus status_out = im_status.first;
+        status_out.time = base::Time::now();
+        _message_status.write(status_out);
     }
 
     /**
@@ -77,6 +81,8 @@ void Task::updateHook()
     {
         _raw_data_output.write(updateSampleTime(queueRawPacketOnTheWay.front().first, queueRawPacketOnTheWay.front().second));
         queueRawPacketOnTheWay.pop();
+        // In usbl, it provides a pose when raw data is transmitted. TODO check periodicty of output
+        usblPosition(local_position, remote_position);
     }
 
     /**
@@ -93,8 +99,41 @@ void Task::updateHook()
     DeliveryStatus delivery_status;
     while( (delivery_status = checkDelivery(im_status, im_attempts)) != PENDING
             && im_status.first.status == PENDING)
-            im_status = std::make_pair (updateDelivery(im_status, delivery_status), base::Time::now());
+        im_status = std::make_pair (updateDelivery(im_status, delivery_status), base::Time::now());
 
+    /**
+     * Handle Position
+     */
+    bool new_pose = false;
+    base::samples::RigidBodyState pose;
+    while(_local_position.read(pose) == RTT::NewData)
+    {
+        if(pose.hasValidPosition())
+        {
+            local_position = pose;
+            new_pose = true;
+        }
+    }
+
+   while(_remote_position.read(pose) == RTT::NewData)
+    {
+        if(pose.hasValidPosition())
+        {
+            remote_position = pose;
+            new_pose = true;
+        }
+    }
+
+   if(new_pose)
+   {
+        travel_time = updateTravelTime(local_position, remote_position);
+        double prob = updateProbability(local_position, remote_position);
+        if(last_probability != prob)
+        {
+            dist = boost::random::bernoulli_distribution<>(prob);
+            last_probability = prob;
+        }
+   }
 }
 void Task::errorHook()
 {
@@ -280,12 +319,15 @@ MessageStatus Task::updateDelivery(const std::pair<usbl_evologics::MessageStatus
         message_input.time = im_status.first.time;
         _message_output.write(toReceivedIM(message_input, im_status.second));
         status.messageDelivered++;
+        // In usbl, it provides a pose when a DELIVERED is received and there is no raw data
+        if(queueRawPacketOnTheWay.empty())
+            usblPosition(local_position, remote_position);
     }
     if(delivery == FAILED)
         status.messageFailed++;
 
     status.status = delivery;
-    status = updateSampleTime(status, im_status.second);
+    status.time = base::Time::now();
     _message_status.write(status);
 
     if(delivery == DELIVERED)
@@ -308,4 +350,22 @@ ReceiveIM Task::toReceivedIM(const SendIM &send_im, base::Time start_delivery)
     msg.integrity = rand() % 60 + 90;
     msg.velocity = (rand() % 1000)/1000;
     return msg;
+}
+
+base::Time Task::updateTravelTime(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote)
+{
+    double distance = (local_position.position - remote_position.position).norm();
+    return base::Time::fromSeconds(distance/sound_velocity);
+}
+
+double Task::updateProbability(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote)
+{
+    // Out of water
+    if(local.position[2] > 0 || remote.position[2] > 0)
+        return 0;
+    // Out of range
+    double distance = (local_position.position - remote_position.position).norm();
+   if(distance > max_distance)
+       return 0;
+   return _probability.get();
 }
