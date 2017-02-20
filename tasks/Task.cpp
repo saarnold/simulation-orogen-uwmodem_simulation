@@ -31,8 +31,7 @@ bool Task::configureHook()
         return false;
 
     last_probability = _probability.get();
-    boost::random::bernoulli_distribution<> bernoulli(last_probability);
-    dist = bernoulli;
+    dist = boost::random::bernoulli_distribution<>(last_probability);
     im_retry = _im_retry.get();
     raw_bitrate = _bitrate.get();
     buffer_size = 0;
@@ -131,8 +130,7 @@ void Task::updateHook()
         double prob = updateProbability(local_position, remote_position);
         if(last_probability != prob)
         {
-            boost::random::bernoulli_distribution<> bernoulli(prob);
-            dist = bernoulli;
+            dist = boost::random::bernoulli_distribution<>(prob);
             last_probability = prob;
         }
    }
