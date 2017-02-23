@@ -8,8 +8,6 @@ describe  'uwmodem_simulation::Task' do
     start 'simulator', 'uwmodem_simulation::Task' => 'simulator'#, :gdb => true
     writer 'simulator', 'message_input', attr_name: 'message_input', type: :buffer, size: 50
     writer 'simulator', 'raw_data_input', attr_name: 'raw_data_input', type: :buffer, size: 50
-    writer 'simulator', 'local_position', attr_name: 'local_position', type: :buffer, size: 50
-    writer 'simulator', 'remote_position', attr_name: 'remote_position', type: :buffer, size: 50
     reader 'simulator', 'message_output', attr_name: 'message_output', type: :buffer, size: 50
     reader 'simulator', 'raw_data_output', attr_name: 'raw_data_output', type: :buffer, size: 50
     reader 'simulator', 'message_status', attr_name: 'message_status'
@@ -23,20 +21,13 @@ describe  'uwmodem_simulation::Task' do
     end
 
     def msg(text)
-        msg = Types.usbl_evologics.SendIM.new
+        msg = Types::UsblEvologics::SendIM.new
         msg.time = Time.now
         msg.deliveryReport = true
         msg.destination = 2
         data_array = text.bytes
         data_array.each {|byte|  msg.buffer << byte.to_i }
         msg
-    end
-
-    def pose(p = Types.base.Vector3d.Zero)
-        position = Types.base.samples.RigidBodyState.new
-        position.time = Time.now
-        position.position = p
-        position
     end
 
     def get_one_new_sample(reader, timeout = 3, poll_period = 0.01)
@@ -52,6 +43,7 @@ describe  'uwmodem_simulation::Task' do
     it 'count rate of good IM transmission' do
         prob = 0.7
         simulator.probability = prob
+        simulator.distance = 0.01
         simulator.im_retry = 0
         simulator.configure
         simulator.start
@@ -72,27 +64,29 @@ describe  'uwmodem_simulation::Task' do
     it 'count rate of good IM transmission with 1 retry' do
         prob = 0.7
         simulator.probability = prob
+        simulator.distance = 0.01
         simulator.im_retry = 1
         simulator.configure
         simulator.start
 
-        proba = 0.91 #(0.7 + 0.3*0.7)
+        prob = 0.91 #(0.7 + 0.3*0.7)
 
         succes = 0
         total = 100
 
         for i in 0...total
-            message_input.write msg("#{i}")
+            message_input.write msg("message number #{i}")
             if sample = get_one_new_sample(message_output, 0.5)
                 succes += 1
             end
         end
-        assert_in_delta succes/total.to_f, proba, 0.1
+        assert_in_delta succes/total.to_f, prob, 0.1
     end
 
     it 'check delivery status of IM' do
         prob = 0.7
         simulator.probability = prob
+        simulator.distance = 0.01
         simulator.im_retry = 0
         simulator.configure
         simulator.start
@@ -128,6 +122,7 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'check bitrate of IM transmission' do
+        simulator.distance = 0
         simulator.probability = 1
         simulator.im_retry = 0
         simulator.configure
@@ -147,14 +142,11 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'check travel time of IM transmission' do
+        simulator.distance = 750
         simulator.im_retry = 0
-        simulator.probability = 1
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
-        sleep(1)
         message_input.write msg("message")
         sample = assert_has_one_new_sample(message_output)
         # Delivery and ack
@@ -188,13 +180,11 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'check travel time of raw data transmission' do
+        simulator.distance = 750
         simulator.probability = 1
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
-        sleep(1)
         data = data("message")
         raw_data_input.write data
         sample = assert_has_one_new_sample raw_data_output, 10
@@ -204,6 +194,7 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'check birate of raw data transmission in short distance' do
+        simulator.distance = 0.1
         simulator.probability = 1
         expected_bitrate = 1600
         simulator.bitrate = expected_bitrate
@@ -226,15 +217,13 @@ describe  'uwmodem_simulation::Task' do
     end
 
     it 'check birate of raw data transmission for long distance' do
+        simulator.distance = 500
         simulator.probability = 1
         expected_bitrate = 1600
         simulator.bitrate = expected_bitrate
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(500,0,0))
-        sleep(1)
         string = "message"
         for i in 0..10
             string += " add more data"
@@ -252,6 +241,7 @@ describe  'uwmodem_simulation::Task' do
     it 'count rate of good raw data transmission' do
         prob = 0.7
         simulator.probability = prob
+        simulator.distance = 0.01
         simulator.bitrate = 800000
         simulator.configure
         simulator.start
@@ -271,6 +261,7 @@ describe  'uwmodem_simulation::Task' do
     it 'count packet size for serial connection' do
         prob = 1
         simulator.probability = prob
+        simulator.distance = 0.01
         simulator.receiver_interface = :SERIAL
         simulator.configure
         simulator.start
@@ -287,13 +278,12 @@ describe  'uwmodem_simulation::Task' do
 
     it 'check for logical time in raw data transmission' do
         simulator.probability = 1
+        simulator.distance = 750
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
         travel_time = 750/1500.to_f
-        sleep(1)
+
         data = data("message size: 16")
         data.time = Time.utc(2000,"jan",1,20,15,1)
 
@@ -304,14 +294,13 @@ describe  'uwmodem_simulation::Task' do
 
     it 'check for logical time in IM transmission' do
         simulator.probability = 1
+        simulator.distance = 750
         simulator.im_retry = 0
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
         travel_time = 2*750/1500.to_f
-        sleep(1)
+
         msg = msg("message size: 16")
         msg.time = Time.utc(2000,"jan",1,20,15,1)
 
@@ -320,18 +309,16 @@ describe  'uwmodem_simulation::Task' do
         assert_in_delta (sample.time - msg.time).to_f, travel_time, travel_time/10.to_f
     end
 
-    it 'im_status with time now' do
+    it 'check for jumping in time in im_status due first input sample' do
         simulator.probability = 1
+        simulator.distance = 750
         simulator.im_retry = 0
         simulator.configure
         simulator.start
 
-        local_position.write pose
-        remote_position.write pose(Types.base.Vector3d.new(750,0,0))
-        sleep(1)
         # im_status starting with time 0
         sample_status1 = assert_has_one_new_sample(message_status, 1)
-        assert_in_delta (sample_status1.time).to_f, (Time.now).to_f, 10.to_f
+        assert_in_delta (sample_status1.time).to_f, 0, 1.to_f
         sleep(5)
         sample_status2 = assert_has_one_new_sample(message_status, 1)
         assert_in_delta (sample_status2.time - sample_status1.time).to_f, 5, 1
@@ -344,9 +331,10 @@ describe  'uwmodem_simulation::Task' do
 
         # im_status now have the timestamp equivalet of the input IM
         sample_status1 = assert_has_one_new_sample(message_status, 1)
-        assert_in_delta (sample_status1.time).to_f, (Time.now).to_f, 2
+        assert_in_delta (sample_status1.time).to_f, msg.time.to_f, 2
         sleep(5)
         sample_status2 = assert_has_one_new_sample(message_status, 1)
         assert_in_delta (sample_status2.time - sample_status1.time).to_f, 5, 1.5
     end
+
 end

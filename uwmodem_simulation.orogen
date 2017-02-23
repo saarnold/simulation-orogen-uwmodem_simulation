@@ -13,6 +13,9 @@ task_context "Task" do
     # This will affect the rate of transmission data in raw_data_output
     # For SERIAL it is 2 bytes/Rawpacket. For ETHERNET it is a direct transmission.
     property "receiver_interface", "/usbl_evologics/InterfaceType", :ETHERNET
+    # Set average distance in meters between modems.
+    # It affects the transfer delay. It does not affect the rate of lost data.
+    property "distance", "double", 300
     # Set probability of good transmission, 0-1
     # It will affect the lost of data
     property "probability", "double", 0.9
@@ -30,12 +33,6 @@ task_context "Task" do
     # Raw data to be sent to remote device
     input_port "raw_data_input", "/iodrivers_base/RawPacket"
 
-    # Position in world frame of the local device
-    input_port "local_position", "/base/samples/RigidBodyState"
-
-    # Position in world frame of the remote device
-    input_port "remote_position", "/base/samples/RigidBodyState"
-
     ###################################
     ##   Output ports
     ###################################
@@ -51,24 +48,4 @@ task_context "Task" do
     runtime_states   :HUGE_INSTANT_MESSAGE, :FULL_IM_QUEUE
 
     periodic 0.01
-end
-
-task_context "Usbl" do
-    subclasses "Task"
-
-    # Source frame of position_sample.
-    property "source_frame", "std/string", "auv"
-    # Target frame of position_sample.
-    property "target_frame", "std/string", "world_usbl"
-    # Minimal periodicy which position is provided. Default 2 second
-    property "min_period", "base/Time"
-
-    # Position of remote device in usbl struct
-    output_port "usbl_position_samples", "/usbl_evologics/Position"
-    # Position of remote device
-    output_port "position_samples", "/base/samples/RigidBodyState"
-
-    # Direction of remote device in usbl struct
-    output_port "direction_samples", "/usbl_evologics/Direction"
-
 end
