@@ -33,6 +33,7 @@ namespace uwmodem_simulation{
 
         base::Time travel_time;
         static const int sound_velocity = 1500;
+        static const double max_distance = 1000;
 
         // Constant bitrate for Instant Message
         static const int im_bitrate = 976;
@@ -73,6 +74,9 @@ namespace uwmodem_simulation{
         base::Time status_period;
         base::Time last_status;
 
+        double last_probability;
+        base::samples::RigidBodyState local_position;
+        base::samples::RigidBodyState remote_position;
     public:
         /** TaskContext constructor for Task
          * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
@@ -264,6 +268,30 @@ namespace uwmodem_simulation{
           * @return ReceiveIM
           */
          usbl_evologics::ReceiveIM toReceivedIM(const usbl_evologics::SendIM &send_im, base::Time start_delivery);
+
+         /** Update travel time according distance
+          *
+          * @para local device's position
+          * @param remote device's positon
+          * @return time of travel
+          */
+         base::Time updateTravelTime(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote);
+
+         /** Update probability according distance
+          * Return zero if out of range/water or the probability set in configure
+          *
+          * @param local device's position
+          * @param remote device's position
+          * @return probability
+          */ 
+         double updateProbability(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote);
+
+         /** Provides pose of remote device in local device reference. To be implemented in derived class.
+          *
+          * @param local position in global frame
+          * @param remote position in global frame
+          */ 
+         virtual void usblPosition(const base::samples::RigidBodyState &local, const base::samples::RigidBodyState &remote){};
     };
 }
 
