@@ -277,9 +277,11 @@ describe  'uwmodem_simulation::Task' do
 
         number = 0
 
-        raw_data_input.write data("message size: 16")
+        text = "message size: 16"
+        raw_data_input.write data(text)
         while sample = get_one_new_sample(raw_data_output, 0.5)
             assert_equal sample.data.size, 2
+            assert_equal sample.data.to_byte_array[8..-1], text[2*number..2*number+1]
             number += 1
         end
         assert_equal 8, number
