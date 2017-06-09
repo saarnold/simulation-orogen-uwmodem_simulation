@@ -73,7 +73,7 @@ void Usbl::usblPosition(const base::samples::RigidBodyState &local, const base::
 
         usbl_position.time = base::Time::now();
         usbl_position.measurementTime = remote.time;
-        usbl_position.remoteAddress = usbl_evologics::AUV;
+        usbl_position.remoteAddress = 1;
         usbl_position.x = position.position[0];
         usbl_position.y = position.position[1];
         usbl_position.z = position.position[2];
@@ -96,7 +96,7 @@ void Usbl::usblPosition(const base::samples::RigidBodyState &local, const base::
         usbl_evologics::Direction direction;
         direction.time = base::Time::now();
         direction.measurementTime = remote.time;
-        direction.remoteAddress = usbl_evologics::AUV;
+        direction.remoteAddress = 1;
         
         base::Vector3d dir = remote.position - local.position;
         base::Vector3d projection(dir[0], dir[1], 0);
