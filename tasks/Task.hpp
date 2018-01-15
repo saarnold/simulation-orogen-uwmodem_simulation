@@ -33,7 +33,7 @@ namespace uwmodem_simulation{
 
         base::Time travel_time;
         static const int sound_velocity = 1500;
-        static const double max_distance = 1000;
+        static constexpr double max_distance = 1000;
 
         // Constant bitrate for Instant Message
         static const int im_bitrate = 976;
